@@ -1,0 +1,26 @@
+name: coronaverse/VehicleUI
+version: 1.0.0
+description: Coronaverse Vehicle UI
+author: coronaverse
+license: LGPL-3.0-or-later
+server:
+  main:
+    - Coronaverse.VehicleUI.Server
+  include:
+    - Coronaverse.VehicleUI.Shared
+client:
+  main:
+    - Coronaverse.VehicleUI.Client
+  include:
+    - Coronaverse.VehicleUI.Shared
+  files:
+    - Overlays/VehicleUIOverlay.html
+    - Overlays/css/vehicle.css
+    - Overlays/images/vehicle-gear.png
+    - Overlays/images/vehicle-lights-high.png
+    - Overlays/images/vehicle-lights.png
+    - Overlays/images/vehicle-seatbelt.png
+    - Overlays/js/all.min.js
+    - Overlays/sounds/car-indicators.ogg
+    - Overlays/sounds/seatbelt-buckle.ogg
+    - Overlays/sounds/seatbelt-unbuckle.ogg

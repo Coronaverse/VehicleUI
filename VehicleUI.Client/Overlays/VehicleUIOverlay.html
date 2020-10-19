@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.0/howler.min.js"></script>
+		<script src="./js/all.min.js"></script>
+		<link rel="stylesheet" href="./css/vehicle.css" />
+
+		<style type="text/css">
+			html, body {
+				width: 100vw;
+				height: 100vh;
+				margin: 0;
+				overflow: hidden;
+				font-size: 10vh;
+				user-select: none;
+				outline: none;
+				background-color: transparent;
+			}
+		</style>
+
+		
+	</head>
+
+	<body>
+		<div id="app">
+			<div class="info vehicle animated faster" v-show="showSpeedometer">
+				<div id="speedometer">
+					<div id="progress-speed">
+						<svg id="progress-speed-circle" viewBox="0 0 100 100">
+							<circle cx="50" cy="50" r="45" class="mask" />
+							<circle cx="50" cy="50" r="45" v-bind:class="currentSpeedColorClasses" :stroke-dasharray="currentSpeedDashArray" />
+						</svg>
+					</div>
+					<div id="vehicle-speed">
+						<span>{{currentSpeed}}</span>
+						<strong :style="{on: cruiseControl, off: !cruiseControl}">{{metrics}}</strong>
+					</div>
+					<div id="vehicle-gear" :class="{icon: true, text: true, pulsing: siren}" v-show="showVehicle">
+						<i><img src="@/assets/vehicle/vehicle-gear.png"></i><span>{{currentGear}}</span>
+					</div>
+					<div id="vehicle-others" class="icon" v-show="!showVehicle">
+						<i :class="[{fas: true}, vehicleIcon]"></i>
+					</div>
+					<div id="vehicle-status-left">
+						<ul>
+							<li id="seatbelt" v-show="showVehicle" :class="{icon: true, on: seatbelt, off: !seatbelt}"><i><img src="@/assets/vehicle/vehicle-seatbelt.png"></i><span style="height: 100%"></span></li>
+							<li class="icon" id="fuel" v-show="showVehicle"><i class="fas fa-gas-pump"></i><span></span></li>
+						</ul>
+					</div>
+					<div id="vehicle-status-right">
+						<ul>
+							<li :class="vehicleLightClasses" id="lights" v-show="showVehicle"><i><img :src="vehicleLightImage"></i><span></span></li>
+							<li class="icon off" id="signals" v-show="showVehicle"><i :class="[{fas: true}, vehicleSignalImage}"></i><span style="height: 100%"></span></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			var app = new Vue({
+				el: '#app',
+				data: {
+					currentData: { status: false },
+					vehicleCars: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17, 18, 19, 20],
+					indicatorAudio: new Howl({
+						src: ['./sounds/car-indicators.ogg'],
+						loop: true
+					}),
+					unbuckleAudio: new Howl({
+						src: ['./sounds/seatbelt-unbuckle.ogg']
+					}),
+					buckleAudio: new Howl({
+						src: ['./sounds/seatbelt-buckle.ogg']
+					}),
+					images: {
+						highBeams: './images/vehicle-lights-high.png',
+						normalBeams: './images/vehicle-lights.png'
+					}
+				},
+				methods: {
+					updateVehicle: function (data) {
+						if (data) {
+							if (!data.status) {
+								this.indicatorAudio.stop();
+								this.unbuckleAudio.stop();
+								this.buckleAudio.stop();
+							} else {
+								// Handle seatbelt audio
+								if (!isUndefined(data.seatbelt) && !isUndefined(this.currentData.seatbelt) && data.seatbelt != this.currentData.seatbelt) {
+									console.log("seatbelt sound should play");
+									if (data.seatbelt) {
+										this.buckleAudio.play();
+									} else {
+										this.unbuckleAudio.play();
+									}
+								}
+
+								// Handle indicator audio
+								if (!isUndefined(data.signals) && !isUndefined(this.currentData.signals) && data.signals != this.currentData.signals) {
+									if (data.signals == 0) {
+										this.indicatorAudio.stop();
+									} else {
+										this.indicatorAudio.play();
+									}
+								}
+
+							}
+							this.currentData = data;
+						}
+					}
+				},
+				computed: {
+					showSpeedometer: function () {
+						return this.currentData.status;
+					},
+					showVehicle: function () {
+						if (this.currentData.type) {
+							if (this.vehiclesCars.includes(this.currentData.type)) {
+								return true;
+							}
+						}
+						return false;
+					},
+					vehicleIcon: function () {
+						switch (this.currentData.type ? this.currentData.type : 0) {
+							case 13:
+								return 'biking';
+							case 14:
+								return 'ship';
+							case 15:
+								return 'helicopter';
+							case 16:
+								return 'plane';
+							case 21:
+								return 'train';
+						}
+						return 'biking';
+					},
+
+					currentGear: function () {
+						if (this.currentData.gear) {
+							switch (this.currentData.gear) {
+								case 0:
+									return 'N';
+								case -1:
+									return 'R';
+								default:
+									return this.currentData.gear.toString();
+							}
+						}
+						return 'N';
+					},
+					currentSpeed: function () {
+						if (this.currentData.speed) {
+							return this.currentData.speed;
+						}
+						return 0;
+					},
+					metrics: function () {
+						if (this.currentData.config) {
+							return this.currentData.config.metricUnit ? "KM/H" : "MP/H";
+						}
+						return "KM/H";
+					},
+					currentSpeedColorClasses: function () {
+						const speedPercentage = this.currentData.speed && this.currentData.config ? (Math.floor(Math.floor(this.currentData.speed * 100) / this.currentData.config.maxSpeed)) : 0;
+						return {
+							speed: true,
+							zero: speedPercentage >= 0 && speedPercentage < 25,
+							twentyfive: speedPercentage >= 25 && speedPercentage < 50,
+							fifty: speedPercentage >= 50 && speedPercentage < 75,
+							seventyfive: speedPercentage >= 75,
+						}
+					},
+					currentSpeedDashArray: function () {
+						if (this.currentData.nail) {
+							return this.currentData.nail;
+						}
+						return 0;
+					},
+					seatbelt: function () {
+						if (this.currentData.seatbelt) {
+							return this.currentData.seatbelt;
+						}
+						return false;
+					},
+					cruiseControl: function () {
+						if (this.currentData.cruiser) {
+							return this.currentData.cruiser;
+						}
+						return false;
+					},
+					siren: function () {
+						if (this.currentData.siren) {
+							return this.currentData.siren;
+						}
+						return false;
+					},
+					vehicleLightImage: function () {
+						if (this.currentData.lights) {
+							return this.currentData.lights == "high" ? this.images.highBeams : this.images.normalBeams;
+						}
+						return this.images.normalBeams;
+					},
+					vehicleLightClasses: function () {
+						const state = this.currentData.lights ? this.currentData.lights : "off";
+						return {
+							icon: true,
+							off: state == "off",
+							normal: state == "normal",
+							high: state == "high"
+						}
+					},
+					vehicleSignalImage: function () {
+						if (this.currentData.signals) {
+							switch (this.currentData.signals) {
+								case 1:
+									return 'long-arrow-alt-left';
+								case 2:
+									return 'long-arrow-alt-right';
+								case 3:
+									return 'arrows-alt-h';
+							}
+						}
+						return 'arrows-alt-h';
+					},
+					vehicleSignalClasses: function () {
+						const state = this.currentData.signals ? this.currentData.signals : 0;
+						return {
+							icon: true,
+							left: state == 1,
+							right: state == 2,
+							dying: state != 0
+						}
+					}
+				}
+			});
+			nfive.on('updateVehicle', (data) => app.updateVehicle(data))
+			nfive.show();
+		</script>
+	</body>
+</html>
